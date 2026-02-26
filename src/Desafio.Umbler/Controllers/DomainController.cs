@@ -2,6 +2,7 @@
 using Desafio.Umbler.Interfaces;
 using Desafio.Umbler.Models;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading.Tasks;
@@ -22,12 +23,20 @@ namespace Desafio.Umbler.Controllers
             _dnsService = dnsService;
         }
 
+
         [HttpGet, Route("domain/{domainName}")]
         public async Task<IActionResult> Get(string domainName)
         {
             if (string.IsNullOrWhiteSpace(domainName))
-                return BadRequest("O nome do domínio é obrigatório.");
+                return BadRequest(new { message = "O nome do domínio é obrigatório." });
 
+            var regexDomain = new Regex(@"^([a-zA-Z0-9]([a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$");
+            if (!regexDomain.IsMatch(domainName))
+            {
+                return BadRequest(new { message = "Formato de domínio inválido." });
+            }
+
+            domainName = domainName.ToLower(); 
             var domain = await _db.Domains.FirstOrDefaultAsync(d => d.Name == domainName);
 
             if (domain == null || DateTime.Now.Subtract(domain.UpdatedAt).TotalMinutes > domain.Ttl)

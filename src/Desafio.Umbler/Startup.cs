@@ -28,6 +28,8 @@ namespace Desafio.Umbler
             services.AddSwaggerGen();
             services.AddScoped<IWhoisService, WhoisService>();
             services.AddScoped<IDnsService, DnsService>();
+            services.AddServerSideBlazor();
+            services.AddHttpClient();
 
             services.AddDbContext<DatabaseContext>(options =>
                 options.UseSqlServer(connectionString)
@@ -64,6 +66,7 @@ namespace Desafio.Umbler
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
+                    endpoints.MapBlazorHub();
             });
         }
     }

@@ -1,0 +1,125 @@
+﻿@using Desafio.Umbler.DTOs
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Web
+@using System.Net.Http
+@inject IHttpClientFactory ClientFactory
+@inject Microsoft.AspNetCore.Components.NavigationManager Navigation
+
+<section id="domain-search">
+    <div class="container py-4 pb-md-5">
+        <div id="box-result" class="row">
+            <div class="col-lg-9 col-md-8">
+                <label class="sr-only" for="txt-search">Domínio</label>
+                <input @bind="DomainToSearch" @onkeyup="HandleKeyUp" class="form-control form-control-lg domain" id="txt-search" placeholder="Digite o Domínio (ex: google.com)" type="text">
+            </div>
+            <div class="col-lg-3 col-md-4 text-xs-right">
+                <button type="button" @onclick="SearchDomain" class="btn btn-success btn-block btn-lg text-xs-center" disabled="@IsLoading">
+                    @if (IsLoading)
+                    {
+                        <i class="fa fa-spinner fa-spin mr-1"></i> <span>Processando...</span>
+                    }
+                    else
+                    {
+                        <i class="icon icon-search icon-white mr-1"></i> <span>Pesquisar</span>
+                    }
+                </button>
+            </div>
+        </div>
+
+        <div class="container w-100 mt-4">
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <div class="alert alert-warning text-center">
+                    <strong>Atenção!</strong> @ErrorMessage
+                </div>
+            }
+
+            @if (SearchResult != null)
+            {
+                <div class="card shadow border-success" style="border-radius: 8px; overflow: hidden;">
+                    <div class="card-header bg-success text-white">
+                        <h4 class="mb-0" style="color: white; font-weight: bold;">
+                            Resultados para: <u>@SearchResult.Name</u>
+                        </h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4 text-center">
+                            <div class="col-md-6">
+                                <p class="mb-1 text-muted" style="text-transform: uppercase; font-size: 0.8em; font-weight: bold;">Endereco IP</p>
+                                <h3><span class="badge badge-info" style="background-color: #17a2b8;">@(SearchResult.Ip ?? "Não resolvido")</span></h3>
+                            </div>
+                            <div class="col-md-6">
+                                <p class="mb-1 text-muted" style="text-transform: uppercase; font-size: 0.8em; font-weight: bold;">Hospedagem</p>
+                                <h3><span class="badge badge-warning" style="background-color: #ffc107; color: #333;">@(SearchResult.HostedAt ?? "Desconhecido")</span></h3>
+                            </div>
+                        </div>
+                        <hr>
+                        <h5 class="text-muted mb-3"><i class="icon icon-list"></i> Dados Brutos do Whois</h5>
+                        <div class="bg-light p-3 rounded" style="max-height: 400px; overflow-y: auto; font-family: monospace; font-size: 0.85em; border: 1px solid #dee2e6;">
+                            @((MarkupString)(SearchResult.WhoIs?.Replace("\n", "<br>") ?? "Sem dados."))
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</section>
+
+@code {
+    private string DomainToSearch { get; set; }
+    private bool IsLoading { get; set; } = false;
+    private string ErrorMessage { get; set; }
+    private DomainResponseDTO SearchResult { get; set; }
+
+    private async Task HandleKeyUp(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await SearchDomain();
+    }
+
+    private async Task SearchDomain()
+    {
+        // Limpa estados anteriores
+        ErrorMessage = null;
+        SearchResult = null;
+
+        if (string.IsNullOrWhiteSpace(DomainToSearch))
+        {
+            ErrorMessage = "Por favor, digite um domínio.";
+            return;
+        }
+
+        IsLoading = true; // Ativa o spinner do botão
+
+        try
+        {
+            var client = ClientFactory.CreateClient();
+            client.BaseAddress = new Uri(Navigation.BaseUri);
+
+            var response = await client.GetAsync($"api/domain/{DomainToSearch}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                // Se deu 200 OK, desserializa o JSON no nosso DTO
+                SearchResult = await response.Content.ReadFromJsonAsync<DomainResponseDTO>();
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            {
+                // Se deu 400 Bad Request pegou Regex 
+                var errorJson = await response.Content.ReadFromJsonAsync<dynamic>();
+                ErrorMessage = errorJson.GetProperty("message").GetString();
+            }
+            else
+            {
+                ErrorMessage = $"Erro na consulta. Status: {response.StatusCode}";
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Erro ao tentar comunicar com a API.";
+        }
+        finally
+        {
+            IsLoading = false; // Desativa o spinner
+        }
+    }
+}
