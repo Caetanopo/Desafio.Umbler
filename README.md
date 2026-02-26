@@ -30,7 +30,7 @@ Ao analisar o código do `DomainController`, identifiquei as possíveis melhoria
 
 1. Clone o repositório.
 2. Certifique-se de ter o *.NET 6 SDK* e o *Node.js* instalados.
-3. No arquivo `appsettings.json`, ajuste a `DefaultConnection` para a string de conexão do meu SQL Server (ou LocalDB).
+3. No arquivo `appsettings.json`, ajuste a `DefaultConnection` para a string de conexão do seu SQL Server (ou LocalDB).
 4. Abra o terminal na pasta raiz do projeto (`src/Desafio.Umbler`) e execute os comandos no powershell:
    dotnet ef database update
    npm install
